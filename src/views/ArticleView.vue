@@ -23,6 +23,10 @@
             <el-icon><View /></el-icon>
             {{ article.view_count || 0 }} 阅读
           </span>
+          <span class="meta-item">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {{ article.like_count || 0 }} 点赞
+          </span>
         </div>
         <div class="article-tags" v-if="article.tags && article.tags.length > 0">
           <el-tag
@@ -40,6 +44,15 @@
 
     <el-card class="article-content-card">
       <div class="article-body markdown-body" v-html="renderContent"></div>
+
+      <div class="like-section">
+        <button type="button" class="like-btn" :class="{ 'liked': isLiked, 'loading': likeLoading }" :disabled="likeLoading" @click="handleLike">
+          <svg v-if="isLiked" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <svg v-else viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="like-text">{{ isLiked ? '取消点赞' : '点赞' }}</span>
+          <span class="like-count">{{ likeCount }}</span>
+        </button>
+      </div>
 
       <div class="article-footer">
         <div class="article-nav">
@@ -226,13 +239,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { Calendar, Refresh, User, View, ChatRound, Delete, Edit } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import api from '@/api'
+import api, { likeApi } from '@/api'
 import { getToken, getUserRole } from '@/utils/auth'
 
 const route = useRoute()
 const article = ref(null)
 const prevArticle = ref(null)
 const nextArticle = ref(null)
+const isLiked = ref(false)
+const likeCount = ref(0)
+const likeLoading = ref(false)
 
 const renderContent = computed(() => {
   if (!article.value) return ''
@@ -463,10 +479,66 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString()
 }
 
+const fetchLikeCount = async () => {
+  try {
+    const articleId = route.params.id
+    const res = await likeApi.getArticleLikeCount(articleId)
+    likeCount.value = res.like_count ?? article.value?.like_count ?? 0
+  } catch (err) {
+    console.error('获取点赞数失败:', err)
+    likeCount.value = article.value?.like_count || 0
+  }
+}
+
+const fetchUserLikeStatus = async () => {
+  if (!getToken()) {
+    isLiked.value = false
+    return
+  }
+  try {
+    const articleId = route.params.id
+    const res = await likeApi.getUserLikeStatus(articleId)
+    isLiked.value = res.is_liked || false
+  } catch (err) {
+    console.error('获取用户点赞状态失败:', err)
+  }
+}
+
+const handleLike = async () => {
+  if (!getToken()) {
+    ElMessage.warning('未登录不能点赞')
+    return
+  }
+
+  if (likeLoading.value) return
+  likeLoading.value = true
+
+  try {
+    const articleId = route.params.id
+    if (isLiked.value) {
+      await likeApi.unlikeArticle(articleId)
+      ElMessage.success('已取消点赞')
+    } else {
+      await likeApi.likeArticle(articleId)
+      ElMessage.success('点赞成功')
+    }
+    await fetchLikeCount()
+    await fetchUserLikeStatus()
+  } catch (err) {
+    console.error('点赞操作失败:', err)
+    await fetchLikeCount()
+    await fetchUserLikeStatus()
+  } finally {
+    likeLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchArticle()
   fetchPrevNext()
   fetchComments()
+  fetchLikeCount()
+  fetchUserLikeStatus()
 })
 
 watch(
@@ -475,6 +547,8 @@ watch(
     fetchArticle()
     fetchPrevNext()
     fetchComments()
+    fetchLikeCount()
+    fetchUserLikeStatus()
   }
 )
 </script>
@@ -515,9 +589,6 @@ watch(
           align-items: center;
           gap: 4px;
 
-          .el-icon {
-            font-size: 16px;
-          }
 
           &.updated {
             color: #e6a23c;
@@ -602,6 +673,71 @@ watch(
           background: #f5f7fa;
         }
       }
+    }
+
+    .like-section {
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+      border-top: 1px solid #f0f0f0;
+
+      .like-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 32px;
+        border: 2px solid #e0e0e0;
+        border-radius: 50px;
+        background: #fff;
+        color: #666;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+
+        &:hover {
+          border-color: #f56c6c;
+          color: #f56c6c;
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(245, 108, 108, 0.2);
+        }
+
+        &.liked {
+          border-color: #f56c6c;
+          background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+          color: #f56c6c;
+
+          svg {
+            animation: likeAnimation 0.3s ease;
+          }
+        }
+
+        &.loading {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        &:disabled {
+          cursor: not-allowed;
+        }
+
+        .like-text {
+          font-size: 16px;
+        }
+
+        .like-count {
+          font-size: 18px;
+          font-weight: 700;
+          min-width: 20px;
+          text-align: center;
+        }
+      }
+    }
+
+    @keyframes likeAnimation {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
     }
 
     .article-footer {
@@ -689,9 +825,6 @@ watch(
       align-items: center;
       gap: 10px;
 
-      .el-icon {
-        font-size: 32px;
-      }
 
       p {
         margin: 0;

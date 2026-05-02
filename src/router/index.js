@@ -15,6 +15,9 @@ import AboutView from '@/views/AboutView.vue'
 import CategoryView from '@/views/CategoryView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import TagArticlesView from '@/views/TagArticlesView.vue'
+import ArchiveView from '@/views/ArchiveView.vue'
+import TagsView from '@/views/TagsView.vue'
+import LikedArticlesView from '@/views/LikedArticlesView.vue'
 
 const routes = [
   {
@@ -47,6 +50,16 @@ const routes = [
         component: CategoriesView,
       },
       {
+        path: 'archive',
+        name: 'archive',
+        component: ArchiveView,
+      },
+      {
+        path: 'tags',
+        name: 'tags',
+        component: TagsView,
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: ProfileView,
@@ -55,6 +68,11 @@ const routes = [
         path: 'about',
         name: 'about',
         component: AboutView,
+      },
+      {
+        path: 'liked',
+        name: 'liked',
+        component: LikedArticlesView,
       },
       {
         path: 'admin/articles',

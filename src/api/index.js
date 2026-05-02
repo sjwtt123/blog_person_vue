@@ -63,3 +63,27 @@ instance.interceptors.response.use(
 )
 
 export default instance
+
+// 点赞相关 API
+export const likeApi = {
+  // 获取文章点赞数（公开接口）
+  getArticleLikeCount(articleId) {
+    return instance.get(`/likes/article/${articleId}/count`)
+  },
+  // 获取用户点赞状态（需要登录）
+  getUserLikeStatus(articleId) {
+    return instance.get(`/likes/article/${articleId}/status`)
+  },
+  // 点赞文章
+  likeArticle(articleId) {
+    return instance.post(`/likes/article/${articleId}`)
+  },
+  // 取消点赞
+  unlikeArticle(articleId) {
+    return instance.delete(`/likes/article/${articleId}`)
+  },
+  // 获取用户点赞的文章列表
+  getUserLikedArticles(params) {
+    return instance.get('/likes/user/articles', { params })
+  },
+}

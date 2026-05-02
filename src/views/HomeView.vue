@@ -1,46 +1,52 @@
 <template>
   <div class="home-view">
     <div class="article-list">
-      <article v-for="article in articles" :key="article.id" class="article-card">
+      <article v-for="article in articles" :key="article.id" class="post-card">
         <!-- 左侧图片 -->
-        <div class="card-image">
-          <router-link :to="'/article/' + article.id">
-            <el-image v-if="article.cover_image" :src="article.cover_image" fit="cover" class="cover-img" lazy />
-            <div v-else class="cover-placeholder" :style="{ background: getGradientColor(article.id) }"></div>
-          </router-link>
-        </div>
+        <router-link :to="'/article/' + article.id" class="post-thumb-link">
+          <img
+            v-if="article.cover_image"
+            :src="article.cover_image"
+            :alt="article.title"
+            class="post-thumb"
+          />
+          <div v-else class="post-thumb-placeholder" :style="{ background: getGradientColor(article.id) }"></div>
+        </router-link>
 
         <!-- 右侧内容 -->
-        <div class="card-content">
-          <!-- 第一行：信息行 -->
-          <div class="content-meta">
-            <span class="meta-date">发布于 {{ formatDate(article.published_at || article.created_at) }}</span>
-            <router-link v-if="article.category" :to="'/category/' + article.category.id" class="meta-category">{{ article.category.name }}</router-link>
-            <span class="meta-item">
+        <div class="post-content">
+          <div class="post-meta">
+            <span class="date">发布于 {{ formatDate(article.published_at || article.created_at) }}</span>
+            <router-link
+              v-if="article.category"
+              :to="'/category/' + article.category.id"
+              class="category"
+              :style="{ color: getCategoryColor(article.category.id), background: getCategoryBgColor(article.category.id) }"
+            >{{ article.category.name }}</router-link>
+            <span class="views">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               {{ article.view_count || 0 }} 浏览
             </span>
-            <span class="meta-item">
+            <span class="likes">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {{ article.like_count || 0 }} 点赞
+            </span>
+            <span class="comments">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               {{ article.comment_count || 0 }} 评论
             </span>
           </div>
 
-          <!-- 第二行：标题 -->
-          <h2 class="article-title">
-            <router-link :to="'/article/' + article.id">{{ article.title }}</router-link>
-          </h2>
+          <router-link :to="'/article/' + article.id" class="post-title">{{ article.title }}</router-link>
 
-          <!-- 第三行：摘要 -->
-          <p class="article-summary">{{ article.summary || '文章摘要为空' }}</p>
+          <p class="post-excerpt">{{ article.summary || '文章摘要为空' }}</p>
 
-          <!-- 第四行：标签 -->
-          <div v-if="article.tags && article.tags.length > 0" class="article-tags">
+          <div v-if="article.tags && article.tags.length > 0" class="post-tags">
             <router-link
               v-for="tag in article.tags.slice(0, 4)"
               :key="tag.id"
               :to="{ name: 'tag', params: { id: tag.id } }"
-              class="tag-item"
+              class="tag"
               :style="{ backgroundColor: getTagBgColor(tag.id), color: getTagTextColor(tag.id) }"
             >
               {{ tag.name }}
@@ -51,20 +57,32 @@
     </div>
 
     <div v-if="articles.length === 0" class="empty-state">
-      <el-empty description="暂无文章" :image-size="120" />
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" width="80" height="80" fill="none" stroke="#d1d5db" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <p>暂无文章</p>
     </div>
 
     <div v-if="totalPage > 1" class="pagination-wrapper">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, prev, pager, next"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-        background
-      />
+      <button
+        class="page-btn"
+        :disabled="currentPage <= 1"
+        @click="handlePageChange(currentPage - 1)"
+      >上一页</button>
+      <template v-for="p in totalPage" :key="p">
+        <button
+          v-if="p === 1 || p === totalPage || (p >= currentPage - 2 && p <= currentPage + 2)"
+          class="page-btn"
+          :class="{ active: p === currentPage }"
+          @click="handlePageChange(p)"
+        >{{ p }}</button>
+        <span v-else-if="p === 2 || p === totalPage - 1" class="page-ellipsis">...</span>
+      </template>
+      <button
+        class="page-btn"
+        :disabled="currentPage >= totalPage"
+        @click="handlePageChange(currentPage + 1)"
+      >下一页</button>
     </div>
   </div>
 </template>
@@ -91,19 +109,24 @@ const gradientColors = [
 ]
 
 const tagColors = [
-  { bg: '#eff6ff', color: '#2563eb' },
+  { bg: '#dbeafe', color: '#2563eb' },
+  { bg: '#fce7f3', color: '#db2777' },
+  { bg: '#d1fae5', color: '#059669' },
+  { bg: '#ede9fe', color: '#7c3aed' },
+  { bg: '#ffedd5', color: '#ea580c' },
   { bg: '#fef3c7', color: '#d97706' },
   { bg: '#ecfdf5', color: '#059669' },
   { bg: '#fdf2f8', color: '#db2777' },
-  { bg: '#f5f3ff', color: '#7c3aed' },
-  { bg: '#fff7ed', color: '#ea580c' },
-  { bg: '#f0fdfa', color: '#0d9488' },
-  { bg: '#fefce8', color: '#ca8a04' },
 ]
+
+const categoryBgColors = ['#eff6ff', '#fffbeb', '#ecfdf5', '#f5f3ff']
+const categoryColors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6']
 
 const getGradientColor = (id) => gradientColors[id % gradientColors.length]
 const getTagBgColor = (id) => tagColors[id % tagColors.length].bg
 const getTagTextColor = (id) => tagColors[id % tagColors.length].color
+const getCategoryBgColor = (id) => categoryBgColors[id % categoryBgColors.length]
+const getCategoryColor = (id) => categoryColors[id % categoryColors.length]
 
 const fetchArticles = async () => {
   try {
@@ -111,6 +134,7 @@ const fetchArticles = async () => {
       page: currentPage.value,
       size: pageSize.value,
       category_id: route.name === 'category' ? route.params.id : undefined,
+      keyword: route.query.q || undefined,
     }
     const data = await api.get('/articles', { params })
     articles.value = data.list || []
@@ -125,12 +149,6 @@ const handlePageChange = (page) => {
   currentPage.value = page
   fetchArticles()
   window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-const handleSizeChange = (size) => {
-  pageSize.value = size
-  currentPage.value = 1
-  fetchArticles()
 }
 
 const formatDate = (dateStr) => {
@@ -150,7 +168,7 @@ watch(
 onMounted(fetchArticles)
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .home-view {
   width: 100%;
 }
@@ -161,79 +179,56 @@ onMounted(fetchArticles)
   gap: 15px;
 }
 
-.article-card {
-  display: flex;
-  gap: 20px;
-  background: #ffffff;
+/* 文章卡片 */
+.post-card {
+  background: #fff;
   border-radius: 12px;
-  padding: 20px;
+  display: flex;
+  gap: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: transform 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-
-    .article-title a {
-      color: #3b82f6;
-    }
-
-    .cover-img {
-      transform: scale(1.05);
-    }
-  }
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-
-    .card-image {
-      width: 100%;
-      height: 200px;
-
-      .cover-img,
-      .cover-placeholder {
-        height: 200px !important;
-      }
-    }
-  }
-}
-
-.card-image {
-  width: 240px;
-  height: 160px;
-  border-radius: 10px;
   overflow: hidden;
-  flex-shrink: 0;
-
-  a {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  .cover-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-
-  .cover-placeholder {
-    width: 100%;
-    height: 100%;
-    border-radius: 10px;
-  }
 }
 
-.card-content {
+.post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.post-thumb-link {
+  flex-shrink: 0;
+  display: block;
+  width: 240px;
+  height: 200px;
+}
+
+.post-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.post-card:hover .post-thumb {
+  transform: scale(1.05);
+}
+
+.post-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.post-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-width: 0;
+  padding: 20px;
 }
 
-.content-meta {
+.post-meta {
   display: flex;
   align-items: center;
   gap: 15px;
@@ -241,57 +236,49 @@ onMounted(fetchArticles)
   font-size: 12px;
   color: #9ca3af;
   flex-wrap: wrap;
-
-  .meta-date {
-    color: #9ca3af;
-  }
-
-  .meta-category {
-    display: inline-block;
-    padding: 2px 8px;
-    background: #eff6ff;
-    color: #3b82f6;
-    border-radius: 4px;
-    font-size: 11px;
-    text-decoration: none;
-    transition: all 0.2s ease;
-
-    &:hover {
-      opacity: 0.85;
-    }
-  }
-
-  .meta-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #9ca3af;
-
-    svg {
-      opacity: 0.7;
-    }
-  }
 }
 
-.article-title {
+.post-meta .date {
+  color: #9ca3af;
+}
+
+.post-meta .category {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.post-meta .category:hover {
+  opacity: 0.85;
+}
+
+.post-meta .views,
+.post-meta .comments,
+.post-meta .likes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #9ca3af;
+}
+
+.post-title {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 10px;
-
-  a {
-    color: #1f2937;
-    text-decoration: none;
-    transition: color 0.2s ease;
-    display: block;
-
-    &:hover {
-      color: #3b82f6;
-    }
-  }
+  text-decoration: none;
+  display: block;
+  transition: color 0.2s;
 }
 
-.article-summary {
+.post-title:hover {
+  color: #3b82f6;
+}
+
+.post-excerpt {
   font-size: 13px;
   color: #6b7280;
   line-height: 1.6;
@@ -302,67 +289,105 @@ onMounted(fetchArticles)
   overflow: hidden;
 }
 
-.article-tags {
+.post-tags {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-
-  .tag-item {
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
 }
 
+.tag {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.tag:hover {
+  opacity: 0.8;
+}
+
+/* 分页 */
 .pagination-wrapper {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 6px;
   margin-top: 40px;
   padding-top: 30px;
-
-  :deep(.el-pagination) {
-    --el-pagination-button-bg-color: #f5f7fb;
-    
-    .btn-prev,
-    .btn-next,
-    li {
-      border-radius: 6px;
-      
-      &.is-active {
-        background: #3b82f6 !important;
-      }
-    }
-  }
 }
 
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #4b5563;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled):not(.active) {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.page-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-ellipsis {
+  padding: 0 4px;
+  color: #9ca3af;
+}
+
+/* 空状态 */
 .empty-state {
   padding: 80px 0;
   text-align: center;
-  background: #ffffff;
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-@media (max-width: 968px) {
-  .article-card {
+.empty-state .empty-icon {
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  color: #9ca3af;
+  font-size: 15px;
+  margin: 0;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .post-card {
     flex-direction: column;
+  }
 
-    .card-image {
-      width: 100%;
-      height: 200px;
+  .post-thumb-link {
+    width: 100%;
+  }
 
-      .cover-img,
-      .cover-placeholder {
-        height: 200px !important;
-      }
-    }
+  .post-thumb,
+  .post-thumb-placeholder {
+    width: 100%;
+    height: 200px;
   }
 }
 </style>

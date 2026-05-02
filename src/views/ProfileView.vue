@@ -124,6 +124,7 @@ const rules = {
     { min: 3, max: 50, message: '长度在 3 到 50 个字符', trigger: 'blur' }
   ],
   email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
   ]
 }
@@ -349,10 +350,6 @@ onMounted(fetchProfile)
     }
 
     .info-form {
-      .el-form-item {
-        margin-bottom: 20px;
-      }
-
       .avatar-upload {
         .avatar-uploader {
           :deep(.el-upload) {
