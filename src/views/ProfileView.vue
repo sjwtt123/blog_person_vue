@@ -272,7 +272,8 @@ const handleChangePassword = async () => {
       passwordSubmitting.value = true
       try {
         await api.post('/user/password', {
-          new_password: passwordForm.newPassword
+          newPassword: passwordForm.newPassword,
+          confirmPassword: passwordForm.confirmPassword,
         })
         ElMessage.success('密码修改成功')
         passwordFormRef.value?.resetFields()
