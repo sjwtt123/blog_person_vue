@@ -5,7 +5,7 @@
     </div>
 
     <div class="category-grid">
-      <el-card v-for="cat in categories" :key="cat.id" class="category-card" @click="router.push('/category/' + cat.id)">
+      <el-card v-for="cat in categories" :key="cat.id" class="category-card" shadow="hover" @click="goToCategory(cat.id)">
         <div class="category-content">
           <div class="category-icon">
             <el-icon><Folder /></el-icon>
@@ -32,10 +32,16 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Folder } from '@element-plus/icons-vue'
 import api from '@/api'
 
+const router = useRouter()
 const categories = ref([])
+
+const goToCategory = (id) => {
+  router.push(`/category/${id}`)
+}
 
 const fetchCategories = async () => {
   try {
@@ -62,9 +68,6 @@ onMounted(fetchCategories)
       color: #303133;
       margin: 0;
 
-      .el-icon {
-        color: #409eff;
-      }
     }
   }
 
@@ -78,11 +81,12 @@ onMounted(fetchCategories)
     cursor: pointer;
     border: none;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
 
     &:hover {
       transform: translateY(-5px);
       box-shadow: 0 8px 25px 0 rgba(0, 0, 0, 0.1);
+      border-color: #409eff;
     }
 
     .category-content {
